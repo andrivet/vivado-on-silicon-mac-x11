@@ -7,51 +7,32 @@ script_dir=$(dirname -- "$(readlink -nf $0)";)
 source "$script_dir/header.sh"
 validate_linux
 
-# generate encoded password file from plain text
-mkdir /home/user/.vnc &> /dev/null
-cat "$script_dir/vncpasswd" | vncpasswd -f > /home/user/.vnc/passwd
+if [[ -z "$DISPLAY" ]]; then f_echo "DISPLAY is not set."; exit 1; fi
+if [[ -z "$XAUTH_COOKIE" ]]; then f_echo "XAUTH_COOKIE is not set."; exit 1; fi
 
-vncserver -DisconnectClients -NeverShared -nocursor -geometry $(tr -d "\n\r\t " < "$script_dir/vnc_resolution") -SecurityTypes VncAuth -PasswordFile /home/user/.vnc/passwd -localhost no -verbose -fg -RawKeyboard -RemapKeys "0xffe9->0xff7e,0xffe7->0xff7e" -- LXDE
-# explanation (see also TigerVNC manual):
-#
-# -DisconnectClients -NeverShared:
-#     Only allow one connected client at a time.
-#
-# -nocursor:
-#     Since the Screen Sharing app doesn't remove the macOS cursor,
-#     disables the cursor within the container.
-#
-# -geometry ...:
-#     Reads the current value from the vnc_resolution file and adjusts
-#     the resolution accordingly.
-#
-# -SecurityTypes VncAuth -PasswordFile /home/user/.vnc/passwd:
-#     The connection is unencrypted and the encoded password file
-#     is generated from the file called "vncpasswd". You can change it,
-#     but the password needs to be 6-8 characters long. This is done so
-#     that the Screen Sharing app can be started with the password embedded
-#     in the URI. This is by itself insecure, but the Docker container
-#     won't allow any inbound traffic other than from the macOS host, so
-#     it should be ok. Note that the VNC password does not have to be
-#     the same as the user password.
-#
-# -localhost no:
-#     Allows connections from clients other than localhost. This allows
-#     macOS to connect to it. Now the exposed VNC server is very insecure
-#     but you can only connect to it from the macOS host so even with a
-#     disabled firewall, no outside computer could connect to it (see
-#     the "docker run" command with the -p option).
-#
-# -verbose -fg:
-#     Display the status of the VNC server and make it such that it stays
-#     in the foreground. This makes the Docker container shut down as soon
-#     as the X session is quit (using the Logout button in the lower right
-#     corner).
-#
-# -RawKeyboard -RemapKeys "0xffe9->0xff7e,0xffe7->0xff7e":
-#     This makes special characters that are typed using the opt-key
-#     typeable by reassigning the "Alt_L" and "Meta_L" keys to the
-#     "Mode_switch" key.
-#
-# -- LXDE:
-#    Starts an LXDE session.
+# Extract the hostname and display number from the DISPLAY variable
+REMOTE=$(echo $DISPLAY | awk -F':' '{print $1}')
+DISP_NUM=$(echo $DISPLAY | awk -F':' '{print $2}')
+if [[ -z "$REMOTE" ]]; then f_echo "DISPLAY is not set correctly (no host name)."; exit 1; fi
+if [[ -z "$DISP_NUM" ]]; then f_echo "DISPLAY is not set correctly (no display number)."; exit 1; fi
+
+DISP_PORT=$((6000 + $DISP_NUM))
+
+# Check if the X server is listeming on the port
+NC=$(nc -zv $REMOTE $DISP_PORT 2>&1 | grep 'Connection to .* succeeded!')
+if [[ -z "$NC" ]]; then f_echo "Unable to connect to the X server."; exit 1; fi
+
+export LD_PRELOAD="/lib/x86_64-linux-gnu/libudev.so.1 /lib/x86_64-linux-gnu/libselinux.so.1 /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libgdk-x11-2.0.so.0"
+xauth add $DISPLAY . $XAUTH_COOKIE
+
+# if Vivado is installed
+if [[ -d "/home/user/Xilinx" ]]; then
+    cd /home/user
+	# Make Vivado connect to the xvcd server running on macOS
+	/home/user/Xilinx/Vivado/*/bin/hw_server -e "set auto-open-servers     xilinx-xvc:$REMOTE:2542" &
+	/home/user/Xilinx/Vivado/*/settings64.sh
+	f_echo "Start Vivado..."
+	/home/user/Xilinx/Vivado/*/bin/vivado
+else
+	f_echo "The installation is incomplete."
+fi

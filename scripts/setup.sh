@@ -3,6 +3,8 @@
 # Initial setup on host (macOS) side
 
 script_dir=$(dirname -- "$(readlink -nf $0)";)
+parent_dir=$(dirname "$script_dir")
+home_dir=$parent_dir/home
 source "$script_dir/header.sh"
 # Make sure that the script is run in macOS and not the Docker container
 validate_macos
@@ -15,7 +17,7 @@ then
 fi
 
 # Make sure there are no previous installations in this folder
-if [ -d "$script_dir/../Xilinx" ]
+if [ -d "$home_dir/Xilinx" ]
 then
 	f_echo "A previous installation was found. To reinstall, remove the Xilinx folder."
 	exit 1
@@ -27,7 +29,7 @@ f_echo "Advancing with the setup requires the following:"
 f_echo "- Agreeing to Xilinx'/AMD's EULAs (which can be obtained by extracting the installation binary)"
 f_echo "- Enabling WebTalk data collection for version 2021.1 and agreeing to corresponding terms"
 f_echo "- Installation of Rosetta 2 and agreeing to Apple's corresponding software license agreement"
-f_echo "Proceed [Y/n]?"
+f_echo "Proceed [y/n]?"
 read user_consent
 case $user_consent in
 [yY]|[yY][eE]*)
@@ -42,6 +44,42 @@ case $user_consent in
 	exit 1
 	;;
 esac
+
+# Check if XQuartz is installed
+if ! command -v xquartz &> /dev/null
+then
+	f_echo "XQuartz is not installed. Please install XQuartz from https://www.xquartz.org/ or with `brew cask install xquartz`."
+	exit 1
+fi
+
+ensure_x11_is_running
+
+# Check if XQuartz is configured to listen on TCP
+NOLISTEM=$(defaults read org.xquartz.X11 nolisten_tcp)
+if [[ "$NOLISTEM" == "1" ]]; then
+	f_echo "XQuartz is not configured to listen on TCP, this will be adjusted."
+	f_echo "Exit XQuartz"
+	osascript -e 'quit app "XQuartz"'
+	sleep 5
+	XQUARTZ=$(pgrep -fl XQuartz)
+	if [[ -n "$XQUARTZ" ]]; then
+		f_echo "XQuartz is still running. Please quit it."
+		exit 1
+	fi
+
+	f_echo "Enable XQuartz to listen on TCP"
+	defaults write org.xquartz.X11 nolisten_tcp 0
+	f_echo "Restart XQuartz"
+	open -a XQuartz
+	sleep 5
+	XQUARTZ=$(pgrep -fl XQuartz)
+	if [[ -z "$XQUARTZ" ]]; then
+		f_echo "XQuartz is not running. Please start it."
+		exit 1
+	fi
+else
+	f_echo "XQuartz is configured to listen on TCP."
+fi
 
 # Check if the Mac is Intel or Apple Silicon
 if [[ "$(uname -m)" == "x86_64" ]]; then
@@ -59,45 +97,40 @@ else
 	fi
 fi
 
-# Get Vivado installation file
-f_echo "You need to put the Vivado installation file into this folder if you have not done so already."
-installation_binary=""
-while true
-do
-	installation_binary=""
-	# Get the absolute path to the file
-	f_echo "Then, drag and drop the Vivado installation binary into this terminal window and press Enter: "
-	read installation_binary
-	# check if it is accessible from the container
-	parent_dir=$(dirname "$script_dir")
-	if ! [[ $installation_binary == $parent_dir/* ]]
-	then
-		f_echo "You need to move the installation binary into the folder!"
-		continue
-	fi
-	# check file hash
-	file_hash=$(md5 -q "$installation_binary")
-	set_vivado_version_from_hash "$file_hash"
-	if [ "$?" -eq 0 ]
-	then
-		f_echo "Valid file provided. Detected version $vivado_version"
-		break
-	else
-		f_echo "File corrupted or version not supported."
-		continue
-	fi
-done
+# Get the absolute path to the file
+installation_binary=$(find "$home_dir/" -type f -name "*.bin" -exec realpath {} \; | head -n 1)
+if [[ -z "$installation_binary" ]]; then
+  f_echo "No installation binary found. Please put the Vivado installation file into the home folder and press Enter."
+  read
+	installation_binary=$(find "$home_dir/" -type f -name "*.bin" -exec realpath {} \; | head -n 1)
+	if [[ -z "$installation_binary" ]]; then
+    f_echo "No installation binary found. Exiting."
+    exit 1
+  fi
+fi
+f_echo "Installation binary detected: $installation_binary"
+
+# check file hash
+file_hash=$(md5 -q "$installation_binary")
+set_vivado_version_from_hash "$file_hash"
+if [ "$?" -eq 0 ]
+then
+  f_echo "Valid file provided. Detected version $vivado_version"
+else
+  f_echo "File corrupted or version not supported."
+  exit 1
+fi
 
 # write file path to "install_bin"
-install_bin_path="${installation_binary#$parent_dir}"
+install_bin_path="${installation_binary#"$home_dir"}"
 install_bin_path="/home/user$install_bin_path"
 echo -n "$install_bin_path" > "$script_dir/install_bin"
 
 # Make the user own the whole folder
-if ! chown -R $current_user "$script_dir/.."
+if ! chown -R $current_user "$home_dir"
 then
 	f_echo "Higher privileges are required to make the folder owned by the user."
-	if ! sudo chown -R $current_user "$script_dir/.."
+	if ! sudo chown -R $current_user "$home_dir"
 	then
 		f_echo "Error setting $current_user as owner of this folder."
 		exit 1
@@ -132,27 +165,14 @@ then
 	exit 1
 fi
 
-# Set VNC resolution
-f_echo "Set the resolution of the container. Keep in mind that high resolutions might make text and images appear small."
-f_echo "You can change the resolution manually in the vnc_resolution file later."
-f_echo "Press enter to leave the default (1920x1080) or type in your preference:"
-read resolution
-# if resolution has the right format
-if [[ $resolution =~ "^[0-9]+x[0-9]+$" ]]
-then
-	f_echo "Setting $resolution as resolution"
-	echo "$resolution" > "$script_dir/vnc_resolution"
-else
-	f_echo "Setting the default of $vnc_default_resolution"
-	echo "$vnc_default_resolution" > "$script_dir/vnc_resolution"
-fi
-echo ""
-
 # copy de_start.desktop autostart file
-mkdir -p "$script_dir/../.config/autostart"
-cp "$script_dir/de_start.desktop" "$script_dir/../.config/autostart/de_start.desktop"
-mkdir "$script_dir/../Desktop"
+mkdir -p "$home_dir/.config/autostart"
+cp "$script_dir/de_start.desktop" "$home_dir/.config/autostart/de_start.desktop"
+mkdir -p "$home_dir/Desktop"
 
 # Start container
 f_echo "Now, the container is started (only terminal, no GUI) and the actual installation process begins."
-docker run --init -it --rm --name vivado_container --mount type=bind,source="$script_dir/..",target="/home/user" -p 127.0.0.1:5901:5901 --platform linux/amd64 x64-linux sudo -H -u user bash /home/user/scripts/install_vivado.sh
+docker run --init -it --rm --name vivado_container \
+  --mount type=bind,source="$home_dir",target="/home/user" \
+  --mount type=bind,source="$parent_dir/scripts",target="/home/user/scripts" \
+  --platform linux/amd64 x64-linux sudo -H -u user bash /home/user/scripts/install_vivado.sh

@@ -14,3 +14,5 @@ installer/
 .vnc/
 .xsession-errors
 scripts/install_bin
+.idea/
+home/

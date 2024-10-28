@@ -88,7 +88,20 @@ function set_vivado_version_from_hash {
     return 0
 }
 
-# The actual resolution is stored in the file vnc_resolution
-vnc_default_resolution="1920x1080"
+function ensure_x11_is_running() {
+    XQUARTZ=$(pgrep -fl XQuartz)
+    if [[ -z "$XQUARTZ" ]]; then
+        f_echo "XQuartz is not running, start it..."
+        open -a XQuartz
+        sleep 5
+        XQUARTZ=$(pgrep -fl XQuartz)
+        if [[ -z "$XQUARTZ" ]]; then
+            f_echo "XQuartz is not running. Please start it."
+            exit 1
+        fi
+    else
+        f_echo "XQuartz is running."
+    fi
+}
 
 current_user=$(whoami)
