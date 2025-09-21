@@ -38,7 +38,7 @@ if false; then
     -e DISPLAY=host.docker.internal:0 \
      -e XAUTH_COOKIE=$XAUTH_COOKIE \
     --platform linux/amd64 \
-    x64-linux sudo -E -H -u user bash
+    x64-linux bash
     exit 0
 fi
 
@@ -50,7 +50,7 @@ docker run --init --rm --name vivado_container \
   -e DISPLAY=host.docker.internal:0 \
   -e XAUTH_COOKIE=$XAUTH_COOKIE \
   --platform linux/amd64 \
-  x64-linux sudo -E -H -u user bash /home/user/scripts/linux_start.sh &
+  x64-linux bash /home/user/scripts/linux_start.sh &
 sleep 7
 
 f_echo "Running xvcd for USB forwarding..."

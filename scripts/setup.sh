@@ -19,7 +19,7 @@ fi
 # Make sure there are no previous installations in this folder
 if [ -d "$home_dir/Xilinx" ]
 then
-	f_echo "A previous installation was found. To reinstall, remove the Xilinx folder."
+	f_echo "A previous installation was found. To reinstall, use the cleanup.sh script."
 	exit 1
 fi
 
@@ -164,11 +164,6 @@ if ! eval "$script_dir/gen_image.sh"
 then
 	exit 1
 fi
-
-# copy de_start.desktop autostart file
-mkdir -p "$home_dir/.config/autostart"
-cp "$script_dir/de_start.desktop" "$home_dir/.config/autostart/de_start.desktop"
-mkdir -p "$home_dir/Desktop"
 
 # Start container
 f_echo "Now, the container is started (only terminal, no GUI) and the actual installation process begins."

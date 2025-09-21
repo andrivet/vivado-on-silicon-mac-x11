@@ -17,7 +17,7 @@ f_echo "Extracting installer"
 eval "$install_bin_path --target /home/user/installer --noexec"
 
 # Get AuthToken by repeating the following command until it succeeds
-f_echo "Log into your Xilinx account to download the necessary files."
+f_echo "Log into your Xilinx (AMD) account to download the necessary files."
 while ! /home/user/installer/xsetup -b AuthTokenGen
 do
 	f_echo "Your account information seems to be wrong. Please try logging in again."
@@ -39,7 +39,7 @@ fi
 if /home/user/installer/xsetup -c "/home/user/scripts/install_configs/${vivado_version}.txt" -b Install -a "${eula_args}"
 then
     f_echo "Vivado was successfully installed."
-    f_echo "Run start_container.sh to launch it."
+    f_echo "Run start_vivado.sh to launch it."
 else
     f_echo "An error occurred during installation. Please run cleanup.sh and try again."
     exit 1

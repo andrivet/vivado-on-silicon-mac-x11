@@ -29,15 +29,13 @@ RUN apt-get install -y --no-install-recommends \
 RUN useradd --create-home --shell /bin/bash --user-group --groups adm,sudo user
 RUN sh -c 'echo "user:password" | chpasswd'
 RUN chown -R user:user /home/user
-# setup LXDE
-RUN mkdir -p /home/user/.config/pcmanfm/LXDE/
-RUN ln -sf /usr/local/share/doro-lxde-wallpapers/desktop-items-0.conf \
-    /home/user/.config/pcmanfm/LXDE/
-RUN mv /usr/bin/lxpolkit /usr/bin/lxpolkit.bak
 
 # Set the locale, because Vivado crashes otherwise
-RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+
+WORKDIR /home/user
+USER user
+
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
