@@ -16,3 +16,5 @@ installer/
 scripts/install_bin
 .idea/
 home/
+
+scripts/xvcd/bin/obj/
