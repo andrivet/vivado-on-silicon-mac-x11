@@ -1,32 +1,51 @@
-# vivado-on-silicon-mac
-This is a tool for installing [Vivado™](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html) on Arm®-based Apple Silicon Macs in a Rosetta-enabled virtual machine. It is in no way associated with Xilinx or AMD.
+# Vivado on Silicon Mac (with X11)
 
-*Updated for 2024!*
+This is a tool for installing [Vivado™](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html) on Arm®-based Apple Silicon Macs in a Rosetta-enabled container It is in no way associated with Xilinx or AMD.
 
-The supported versions are:
+## About this Fork
+
+* The original project uses a linux desktop and VNC to connect to this desktop.
+This fork uses instead X11 (XQuartz) and thus, Vivado will directly appear on the desktop of macOS.
+
+* The project has been updated for Vivado 2025.1
+
+* The project has been updated to be compatible with FT2232C and FT2232H. The later is used by some Digilent hardware. This compatibility is possible thanks to CanardConfit's fork of xvcd (https://github.com/CanardConfit/xvcd)
+
+## Compatibility
+
+The supported versions of Vivado are:
+
 - 2021.1
 - 2022.2
 - 2023.1
 - 2023.2
 - 2024.1
+- 2024.2
 
-Due to unexpected behaviour in Rosetta emulation, most versions of macOS 14 (including 14.5) are not supported. macOS 13 may work, but the above versions were tested on macOS 15.
+For the moment, it is not compatible with 2025.1.
+
+Due to unexpected behaviour in Rosetta emulation, most versions of macOS 14 (including 14.5) are not supported. macOS 13 may work, but the above versions were tested on macOS 15 and macOS 26.
 
 ## How to install
-Expect the installation process to last about one to two hours and download ~20 GB for the web installer.
+
+Expect the installation process to last about one to two hours and download ~30 GB for the web installer.
 
 ### Preparations
-You first need to install [Docker®](https://www.docker.com/products/docker-desktop/) (make sure to choose "Apple Chip" instead of "Intel Chip"). You may find it useful to disable the option "Open Docker Dashboard when Docker Desktop starts".
 
-Rosetta must be installed on your Mac. The installer will ask you to install it if it is not already installed.
+* You first need to install [Docker®](https://www.docker.com/products/docker-desktop/) (make sure to choose "Apple Chip" instead of "Intel Chip"). You may find it useful to disable the option "Open Docker Dashboard when Docker Desktop starts".
 
-You will also need the Vivado installer file (the "Linux® Self Extracting Web Installer").
+* Rosetta must be installed on your Mac. The installer will ask you to install it if it is not already installed.
 
+* You will also need the Vivado installer file (the "Linux® Self Extracting Web Installer"):
+    1. Go to https://www.xilinx.com/support/download.html
+    2. Select the version you want such as 2025.1
+    3. Download: AMD Unified Installer for FPGAs & Adaptive SoCs: Linux Self Extracting Web Installer
 
 ### Installation
-1. Download this [tool](https://github.com/ichi4096/vivado-on-silicon-mac/archive/refs/heads/main.zip).
+
+1. Download this [tool](https://github.com/andrivet/vivado-on-silicon-mac/archive/refs/heads/main.zip).
 2. Extract the ZIP file.
-3. Copy the Vivado installer into the extracted folder.
+3. Copy the Vivado installer into the `home` folder.
 4. Open a terminal. Then copy & paste:
 ```
 cd Downloads/vivado-on-silicon-mac-main
@@ -37,9 +56,10 @@ caffeinate -dim zsh ./scripts/setup.sh
 Note that the installation requires You to log into Your AMD account. When asked to, allow "Terminal" to access data of other apps (the installation may succeed regardless).
 
 ### Usage
+
 Run
 ```
-Downloads/vivado-on-silicon-mac-main/scripts/start_container.sh
+Downloads/vivado-on-silicon-mac-main/scripts/start_vivado.sh
 ```
 inside the terminal. The container can be stopped by pressing `Ctrl-C` inside the terminal or by logging out inside the container.
 
@@ -61,7 +81,12 @@ You may download via `git` instead of downloading the ZIP file and/or modify the
 
 Installation on external storage media may work but can cause issues, such as a file system (like FAT32, exFAT, NTFS) that does not support UNIX file permissions.
 
+### Black windows and display glitches
+
+There are sometimes some glitches. For example, you may see some black windows. In this case, resize the window to see its content.
+
 ## Installing other software
+
 If you want to use additional Ubuntu packages, specify them in the Dockerfile. If you want to install further AMD / Xilinx software, you can do so by copying the corresponding installer into the folder containing the Vivado installation and launching it via the GUI. __Attention!__ You must install it into the folder `/home/user/Xilinx` because any data outside of `/home/user` does not persist between VM reboots. You can even skip installing Vivado entirely by commenting out the last line of `setup.sh`. I do not plan on supporting this out of the box.
 
 ## How it works
