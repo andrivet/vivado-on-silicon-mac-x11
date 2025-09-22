@@ -1,13 +1,13 @@
 # Vivado on Silicon Mac (with X11)
 
-This is a tool for installing [Vivado™](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html) on Arm®-based Apple Silicon Macs in a Rosetta-enabled container It is in no way associated with Xilinx or AMD.
+This is a tool for installing [Vivado™](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html) on Arm®-based Apple Silicon Macs in a Rosetta-enabled container. It is in no way associated with Xilinx or AMD.
 
 ## About this Fork
 
 * The original project uses a linux desktop and VNC to connect to this desktop.
 This fork uses instead X11 (XQuartz) and thus, Vivado will directly appear on the desktop of macOS.
 
-* The project has been updated for Vivado 2025.1
+* The project has been updated for Vivado 2024.2
 
 * The project has been updated to be compatible with FT2232C and FT2232H. The later is used by some Digilent hardware. This compatibility is possible thanks to CanardConfit's fork of xvcd (https://github.com/CanardConfit/xvcd)
 
@@ -90,32 +90,33 @@ There are sometimes some glitches. For example, you may see some black windows. 
 If you want to use additional Ubuntu packages, specify them in the Dockerfile. If you want to install further AMD / Xilinx software, you can do so by copying the corresponding installer into the folder containing the Vivado installation and launching it via the GUI. __Attention!__ You must install it into the folder `/home/user/Xilinx` because any data outside of `/home/user` does not persist between VM reboots. You can even skip installing Vivado entirely by commenting out the last line of `setup.sh`. I do not plan on supporting this out of the box.
 
 ## How it works
+
 ### Docker, Rosetta & VNC
+
 This collection of scripts creates an x64 Docker container running Linux® that is accelerated by [Rosetta 2](https://developer.apple.com/documentation/apple-silicon/about-the-rosetta-translation-environment) via the Apple Virtualization framework. The container has all the necessary libraries preinstalled for running Vivado. It is installed automatically given an installer file that the user must provide. GUI functionality is provided via VNC and the built-in "Screen Sharing" app.
 
 ### USB connection
-A drawback of the Apple Virtualization framework is that there is no implementation for USB forwarding as of when I'm writing this. Therefore, these scripts set up the [Xilinx Virtual Cable protocol](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/644579329/Xilinx+Virtual+Cable). Intended to let a computer connect to an FPGA plugged into a remote computer, it allows for the host system to run an XVC server (in this case a software called [xvcd](https://github.com/tmbinc/xvcd) by Felix Domke), to which the docker container can connect.
+
+A drawback of the Apple Virtualization framework is that there is no implementation for USB forwarding as of when I'm writing this. Therefore, these scripts set up the [Xilinx Virtual Cable protocol](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/644579329/Xilinx+Virtual+Cable). Intended to let a computer connect to an FPGA plugged into a remote computer, it allows for the host system to run an XVC server (in this case a software called [xvcd](https://github.com/CanardConfit/xvcd)), to which the docker container can connect.
 
 xvcd is contained in this repository, but with slight changes to make it compile on modern day macOS (compilation requires libusb and libftdi installed via homebrew, though there is a compiled version included). It runs continuously while the docker container is running.
 
-This version of xvcd only supports the FT2232C chip. There are forks of this software supporting other boards such as [xvcserver by Xilinx](https://github.com/Xilinx/XilinxVirtualCable).
+This version of xvcd supports the FT2232C/H chips. There are forks of this software supporting other boards such as [xvcserver by Xilinx](https://github.com/Xilinx/XilinxVirtualCable).
 
 ## Files overview
 - `header.sh`: Common shell functions
 - `setup.sh`: Setup file, to be run once in the beginning
-- `start_container.sh`: Starts the container and "Screen Sharing" session
+- `start_vivado.sh`: Starts the container and X11 session
 - `configure_docker.sh`: Automatically set necessary Docker settings
 - `gen_image.sh`: Generates the Docker image to be used according to the Dockerfile
 - `hashes.sh`: Contains the hashes of installer files and associated Vivado versions
 - `linux_start.sh`: Docker container start script
-- `de_start.sh`: Script to be executed when the desktop environment has started
 - `cleanup.sh`: Removes Vivado and dotfiles.
-- `xvcd`: [xvcd](https://github.com/tmbinc/xvcd) source and binary copy
+- `xvcd`: [xvcd](https://github.com/CanardConfit/xvcd) source and binary copy
 - `install_bin`: Full path to Vivado installation binary
-- `vnc_resolution`: Manually adjustable resolution of the container GUI, formatted like "widthxheight"
-- `vncpasswd`: Password for the VNC connection. It is purposefully weak, as it serves no security function. The VNC server inside the container will not allow outside connections. The password can be changed manually nonetheless.
 
 ## License, copyright and trademark information
+
 The repository's contents are licensed under the Creative Commons Zero v1.0 Universal license.
 
 Note that the scripts are configured such that you automatically agree to Xilinx' and 3rd party EULAs (which can be obtained by extracting the installer yourself) by running them. You also automatically agree to [Apple's software license agreement](https://www.apple.com/legal/sla/) for Rosetta 2.
@@ -124,7 +125,7 @@ If you are installing Vivado version 2021.1:
 - WebTalk data collection is enabled, and you automatically agree to the corresponding terms.
 - For more information, see: https://docs.amd.com/r/2021.1-English/ug973-vivado-release-notes-install-license/WebTalk-Participation.
 
-This repository contains the modified source code of [xvcd](https://github.com/tmbinc/xvcd) as well as a compiled version which is statically linked against [libusb](https://libusb.info/) and [libftdi](https://www.intra2net.com/en/developer/libftdi/). This is in accordance to the [LGPL Version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html), under which both of those libraries are licensed.
+This repository contains the modified source code of [xvcd](https://github.com/CanardConfit/xvcd) as well as a compiled version which is statically linked against [libusb](https://libusb.info/) and [libftdi](https://www.intra2net.com/en/developer/libftdi/). This is in accordance to the [LGPL Version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html), under which both of those libraries are licensed.
 
 Vivado and Xilinx are trademarks of Xilinx, Inc.
 
